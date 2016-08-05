@@ -1,2 +1,3 @@
 version = "$(pkg_version)"
 ppx = "./ppx_markdown.native"
+requires = "omd"
