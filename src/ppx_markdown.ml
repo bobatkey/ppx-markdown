@@ -45,7 +45,7 @@ module Translation = struct
          [%expr Omd_representation.Emph [%e omd doc]]
 
       | Omd.Bold doc ->
-         [%expr Omd_representation.Emph [%e omd doc]]
+         [%expr Omd_representation.Bold [%e omd doc]]
 
       | Omd.Ul docs ->
          [%expr Omd_representation.Ul [%e list omd docs]]
