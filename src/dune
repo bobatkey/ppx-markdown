@@ -1,0 +1,7 @@
+(library
+ (name        ppx_markdown)
+ (public_name ppx_markdown)
+ (libraries   ppxlib omd)
+ (kind        ppx_rewriter)
+ (flags       (:standard -w -9))
+ (preprocess  (pps ppxlib.metaquot)))

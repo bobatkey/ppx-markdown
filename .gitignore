@@ -1,6 +1,4 @@
 *~
 /_build
-/oUnit-anon.cache
-/META
-/ppx_markdown.native
-/test.native
+.merlin
+/_opam

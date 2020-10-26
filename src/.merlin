@@ -1,5 +1,0 @@
-PKG compiler-libs
-PKG ppx_tools.metaquot
-PKG omd
-FLG -safe-string
-FLG -w A-4-9-48
