@@ -7,6 +7,12 @@ module Translation = struct
       l
       [%expr [] ]
 
+  let int i =
+    Ast_helper.(Exp.constant (Const.int i))
+
+  let char i =
+    Ast_helper.(Exp.constant (Const.char i))
+
   let string str =
     Ast_helper.(Exp.constant (Const.string str))
 
@@ -18,150 +24,90 @@ module Translation = struct
     | Some x -> [%expr Some [%e t x]]
 
   module Omd = struct
-    let rec element ~loc = function
-      | Omd.H1 doc ->
-         [%expr Omd_representation.H1 [%e omd ~loc doc]]
 
-      | Omd.H2 doc ->
-         [%expr Omd_representation.H2 [%e omd ~loc doc]]
+    let attributes ~loc =
+      list ~loc (pair string string)
 
-      | Omd.H3 doc ->
-         [%expr Omd_representation.H3 [%e omd ~loc doc]]
+    let rec inline ~loc = function
+      | Omd.Concat (attr, bits) ->
+        [%expr Omd.Concat ([%e attributes ~loc attr], [%e inline_list ~loc bits])]
+      | Omd.Text (attr, txt) ->
+        [%expr Omd.Text ([%e attributes ~loc attr], [%e string txt])]
+      | Omd.Code (attr, txt) ->
+        [%expr Omd.Code ([%e attributes ~loc attr], [%e string txt])]
+      | Omd.Html (attr, txt) ->
+        [%expr Omd.Html ([%e attributes ~loc attr], [%e string txt])]
+      | Omd.Emph (attr, bit) ->
+        [%expr Omd.Emph ([%e attributes ~loc attr], [%e inline ~loc bit])]
+      | Omd.Strong (attr, bit) ->
+        [%expr Omd.Strong ([%e attributes ~loc attr], [%e inline ~loc bit])]
+      | Omd.Hard_break attr ->
+        [%expr Omd.Hard_break [%e attributes ~loc attr]]
+      | Omd.Soft_break attr ->
+        [%expr Omd.Soft_break [%e attributes ~loc attr]]
+      | Omd.Link (attr, link_info) ->
+        [%expr Omd.Link ([%e attributes ~loc attr], [%e link ~loc link_info])]
+      | Omd.Image (attr, link_info) ->
+        [%expr Omd.Image ([%e attributes ~loc attr], [%e link ~loc link_info])]
 
-      | Omd.H4 doc ->
-         [%expr Omd_representation.H4 [%e omd ~loc doc]]
+    and inline_list ~loc =
+      list ~loc inline
 
-      | Omd.H5 doc ->
-         [%expr Omd_representation.H5 [%e omd ~loc doc]]
+    and link ~loc { Omd.label; destination; title } =
+      [%expr { Omd.label = [%e inline ~loc label]
+             ; Omd.destination = [%e string destination]
+             ; Omd.title = [%e option ~loc string title ]
+             } ]
 
-      | Omd.H6 doc ->
-         [%expr Omd_representation.H6 [%e omd ~loc doc]]
+    let def_elt ~loc { Omd.term; defs } =
+      [%expr { Omd.term = [%e inline ~loc term]
+             ; Omd.defs = [%e inline_list ~loc defs]
+             } ]
 
-      | Omd.Paragraph doc ->
-         [%expr Omd_representation.Paragraph [%e omd ~loc doc]]
+    let list_type ~loc = function
+      | Omd.Ordered (i, c) -> [%expr Omd.Ordered ([%e int i], [%e char c])]
+      | Omd.Bullet c       -> [%expr Omd.Bullet ([%e char c])]
 
-      | Omd.Text str ->
-         [%expr Omd_representation.Text [%e string str]]
+    let list_spacing ~loc = function
+      | Omd.Loose -> [%expr Loose]
+      | Omd.Tight -> [%expr Tight]
 
-      | Omd.Emph doc ->
-         [%expr Omd_representation.Emph [%e omd ~loc doc]]
+    let rec block ~loc = function
+      | Omd.Heading (attrs, d, doc) ->
+        [%expr Omd.Heading ([%e attributes ~loc attrs], [%e int d], [%e inline ~loc doc])]
 
-      | Omd.Bold doc ->
-         [%expr Omd_representation.Bold [%e omd ~loc doc]]
+      | Omd.Paragraph (attrs, doc) ->
+        [%expr Omd.Paragraph ([%e attributes ~loc attrs], [%e inline ~loc doc])]
 
-      | Omd.Ul docs ->
-         [%expr Omd_representation.Ul [%e list ~loc omd docs]]
+      | Omd.Blockquote (attr, doc) ->
+        [%expr Omd.Blockquote ([%e attributes ~loc attr], [%e block_list ~loc doc])]
 
-      | Omd.Ol docs ->
-         [%expr Omd_representation.Ol [%e list ~loc omd docs]]
+      | Omd.Thematic_break attr ->
+        [%expr Omd.Thematic_break [%e attributes ~loc attr]]
 
-      | Omd.Ulp docs ->
-         [%expr Omd_representation.Ulp [%e list ~loc omd docs]]
+      | Omd.Code_block (attr, s1, s2) ->
+        [%expr Omd.Code_block ([%e attributes ~loc attr], [%e string s1], [%e string s2])]
 
-      | Omd.Olp docs ->
-         [%expr Omd_representation.Olp [%e list ~loc omd docs]]
+      | Omd.Html_block (attr, s) ->
+        [%expr Omd.Html_block ([%e attributes ~loc attr], [%e string s])]
 
-      | Omd.Code (lang, code) ->
-         [%expr Omd_representation.Code
-                  ([%e string lang],
-                   [%e string code])
-         ]
+      | Omd.Definition_list (attr, defs) ->
+        [%expr Omd.Definition_list ([%e attributes ~loc attr], [%e list ~loc def_elt defs])]
 
-      | Omd.Code_block (lang, code) ->
-         [%expr Omd_representation.Code_block
-                  ([%e string lang],
-                   [%e string code])
-         ]
+      | Omd.List (attr, typ, spac, items) ->
+        [%expr Omd.List ([%e attributes ~loc attr],
+                         [%e list_type ~loc typ],
+                         [%e list_spacing ~loc spac],
+                         [%e list ~loc block_list items])]
 
-      | Omd.Br ->
-         [%expr Omd_representation.Br]
-
-      | Omd.Hr ->
-         [%expr Omd_representation.Hr]
-
-      | Omd.NL ->
-         [%expr Omd_representation.NL]
-
-      | Omd.Url (href, doc, title) ->
-         [%expr Omd_representation.Url
-                  ([%e string href],
-                   [%e omd ~loc doc],
-                   [%e string title])
-         ]
-
-      | Omd.Ref (references, name, text, fallback) ->
-         begin match references#get_ref name with
-           | None ->
-              [%expr Omd_representation.Text
-                       [%e string fallback#to_string]]
-           | Some (href, title) ->
-              [%expr Omd_representation.Url
-                       ([%e string href],
-                        [Omd_representation.Text [%e string text]],
-                        [%e string title])
-              ]
-         end
-
-      | Omd.Img_ref (references, name, alt, fallback) ->
-         begin match references#get_ref name with
-           | None ->
-              [%expr Omd_representation.Text
-                       [%e string fallback#to_string]]
-           | Some (href, title) ->
-              [%expr Omd_representation.Url
-                       ([%e string alt],
-                        [%e string href],
-                        [%e string title])
-              ]
-         end
-
-      | Omd.Html (name, attrs, doc) ->
-         [%expr Omd_representation.Html
-                  ([%e string name],
-                   [%e list ~loc
-                         (pair string (option ~loc string))
-                         attrs],
-                   [%e omd ~loc doc])
-         ]
-
-      | Omd.Html_block (name, attrs, doc) ->
-         [%expr Omd_representation.Html_block
-                  ([%e string name],
-                   [%e list ~loc
-                         (pair string (option ~loc string))
-                         attrs],
-                   [%e omd ~loc doc])
-         ]
-
-      | Omd.Html_comment str ->
-         [%expr Omd_representation.Html_comment [%e string str]]
-
-      | Omd.Raw str ->
-         [%expr Omd_representation.Raw [%e string str]]
-
-      | Omd.Raw_block str ->
-         [%expr Omd_representation.Raw_block [%e string str]]
-
-      | Omd.Blockquote doc ->
-         [%expr Omd_representation.Blockquote [%e omd ~loc doc]]
-
-      | Omd.Img (alt, src, title) ->
-         [%expr Omd_representation.Img
-                  ([%e string alt],
-                   [%e string src],
-                   [%e string title])]
-
-      | Omd.X _ ->
-         failwith "Markdown extensions not handled"
-
-    and omd ~loc elems =
-      list ~loc element elems
+    and block_list ~loc (blocks : Omd.doc) =
+      list ~loc block blocks
   end
 end
 
 let expand ~ctxt str =
   let loc = Expansion_context.Extension.extension_point_loc ctxt in
-  Translation.Omd.omd ~loc (Omd.of_string str)
+  Translation.Omd.block_list ~loc (Omd.of_string str)
 
 let my_extension =
  Extension.V3.declare

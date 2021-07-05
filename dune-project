@@ -16,6 +16,7 @@
  (depends
   (dune (>= 2.0))
   (ocaml (>= 4.04.0))
+  (omd (>= 2.0.0~alpha2))
   (ppxlib (>= 0.15.0))
 
   (ounit :with-test)))
